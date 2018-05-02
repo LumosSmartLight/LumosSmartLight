@@ -1,0 +1,76 @@
+body {
+  height: 100%;
+  background-color: rgb(235, 235, 235);
+}
+
+#root {
+  flex: 1;
+}
+
+.App {
+  text-align: center;
+}
+
+.App-logo {
+  /* animation: App-logo-spin infinite 20s linear; */
+  height: 140px;
+  /* -webkit-filter: invert(100%); */
+  /* filter: fill(100%); */
+
+}
+
+.App-header {
+  background-color: darkblue;
+  height: 150px;
+  padding: 20px;
+  color: white;
+}
+
+.App-title {
+  font-size: 1.5em;
+}
+
+.toggleOnOff {
+  display: inline-block !important;
+  width: 80px !important;
+  margin: 5px 10px 0px 10px;
+  float: right;
+}
+
+label {
+  font-weight: bold;
+  font-size: 16px;
+}
+
+/* .toggleOnOff > div {
+  position: relative;
+  left: 50px;
+} */
+
+.App-intro {
+  font-size: large;
+}
+
+.slider-container {
+  max-width: 80%;
+  padding: 20px;
+  margin: 0 auto;
+}
+
+.card {
+ margin: 20px;
+}
+
+.intensity {
+  margin: 0px;
+  width: 100%;
+}
+
+.slider-container:nth-child(0) {
+  background-color: coral;
+}
+
+@keyframes App-logo-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
