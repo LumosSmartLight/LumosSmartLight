@@ -1,14 +1,22 @@
 from flask import Flask, request
 from flask_restful import Resource, Api
+from firebase import firebase
+import json
 
 app = Flask(__name__)
 api = Api(app)
+firebase = firebase.FirebaseApplication("https://lumossmartlight.firebaseio.com/", None)
 
-todos = {}
+class LumosAPI(Resource):
+    @app.route('/api/config', methods=['GET'])
+    def getConfig():
+        result = firebase.get('/config', None)
+        print(result)
+        return json.dumps(result)
 
-class HelloWorld(Resource):
-    def get(self):
-        return {'hello': 'world'}
+    # @app.route('/api/config', method=['POST'])
+    # def setConfig():
+
 
 #class TodoSimple(Resource):
 #    def get(self, todo_id):
@@ -19,9 +27,9 @@ class HelloWorld(Resource):
 #        return {todo_id: todos[todo_id]}
 
 #api.add_resource(TodoSimple, '/<string:todo_id>')
-api.add_resource(HelloWorld, '/')
+api.add_resource(LumosAPI, '/api/config')
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0',debug=True)
+    app.run(host='10.92.72.181',debug=True) #Change host do user IP
     #app.run(debug=True)
 
