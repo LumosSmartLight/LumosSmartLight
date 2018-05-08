@@ -48,9 +48,9 @@ extern "C" {
 #include "driver/include/m2m_wifi.h"
 
 /** Wi-Fi Settings */
-#define MAIN_WLAN_SSID                    "Virus_Alpha" /**< Destination SSID */
+#define MAIN_WLAN_SSID                    "Borba" /**< Destination SSID */
 #define MAIN_WLAN_AUTH                    M2M_WIFI_SEC_WPA_PSK /**< Security manner */
-#define MAIN_WLAN_PSK                     "1223334444" /**< Password for Destination SSID */
+#define MAIN_WLAN_PSK                     "Borbinha" /**< Password for Destination SSID */
 
 /** Using broadcast address for simplicity. */
 #define MAIN_SERVER_PORT                    (5000)

@@ -317,29 +317,28 @@ int main(void)
   while(1){
  		m2m_wifi_handle_events(NULL);
 
-   	if (wifi_connected == M2M_WIFI_CONNECTED) {  
-    	/* Open client socket. */
+   		if (wifi_connected == M2M_WIFI_CONNECTED) {  
+    		/* Open client socket. */
 			if (tcp_client_socket < 0) {
-        printf("socket init \n");
+			printf("socket init \n");
 				if ((tcp_client_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
 					printf("main: failed to create TCP client socket error!\r\n");
 					continue;
 				}
 
-				/* Connect server */
-        printf("socket connecting\n");
+			/* Connect server */
+			printf("socket connecting\n");
         
-				if (connect(tcp_client_socket, (struct sockaddr *)&addr_in, sizeof(struct sockaddr_in)) != SOCK_ERR_NO_ERROR) {
-					close(tcp_client_socket);
-					tcp_client_socket = -1;
-          printf("error\n");
-				}else{
-          gbTcpConnection = true;
-        }
+			if (connect(tcp_client_socket, (struct sockaddr *)&addr_in, sizeof(struct sockaddr_in)) != SOCK_ERR_NO_ERROR) {
+				close(tcp_client_socket);
+				tcp_client_socket = -1;
+				printf("error\n");
+			} else {
+				gbTcpConnection = true;
 			}
-    }
-  }
-
+		}
+	}
+}
 
 	return 0;
 }
