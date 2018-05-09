@@ -25,7 +25,7 @@ static bool gbConnectedWifi = false;
 /** Get host IP status variable. */
 /** Wi-Fi connection state */
 static uint8_t wifi_connected;
-
+volatile uint8_t intensity = 0;
 
 /** Instance of HTTP client module. */
 static bool gbHostIpByName = false;
@@ -209,7 +209,8 @@ static void socket_cb(SOCKET sock, uint8_t u8Msg, void *pvMsg)
       printf("socket_msg_connect\n"); 
 			if (gbTcpConnection) {
 				memset(gau8ReceivedBuffer, 0, sizeof(gau8ReceivedBuffer));
-				sprintf((char *)gau8ReceivedBuffer, "%s", MAIN_PREFIX_BUFFER);
+				//sprintf((char *)gau8ReceivedBuffer, "%s", MAIN_PREFIX_BUFFER);
+				sprintf((char *)gau8ReceivedBuffer, "GET /api/getconfig HTTP/1.1\r\n Accept: */*\r\n\r\n");
 
 				tstrSocketConnectMsg *pstrConnect = (tstrSocketConnectMsg *)pvMsg;
 				if (pstrConnect && pstrConnect->s8Error >= SOCK_ERR_NO_ERROR) {
@@ -237,7 +238,7 @@ static void socket_cb(SOCKET sock, uint8_t u8Msg, void *pvMsg)
 
 			tstrSocketRecvMsg *pstrRecv = (tstrSocketRecvMsg *)pvMsg;
 			if (pstrRecv && pstrRecv->s16BufferSize > 0) {
-        printf(pstrRecv->pu8Buffer);
+				printf(pstrRecv->pu8Buffer);
 				
 				memset(gau8ReceivedBuffer, 0, sizeof(gau8ReceivedBuffer));
 				recv(tcp_client_socket, &gau8ReceivedBuffer[0], MAIN_WIFI_M2M_BUFFER_SIZE, 0);

@@ -159,7 +159,6 @@ static void socket_cb(SOCKET sock, uint8_t u8Msg, void *pvMsg)
 			if (gbTcpConnection) {
 				memset(gau8ReceivedBuffer, 0, sizeof(gau8ReceivedBuffer));
 				sprintf((char *)gau8ReceivedBuffer, "GET /api/config HTTP/1.1\r\n Accept: */*\r\n\r\n");
-				delay_ms(5000);
 				//sprintf((char *)gau8ReceivedBuffer, "%s", MAIN_PREFIX_BUFFER);
 
 				tstrSocketConnectMsg *pstrConnect = (tstrSocketConnectMsg *)pvMsg;
