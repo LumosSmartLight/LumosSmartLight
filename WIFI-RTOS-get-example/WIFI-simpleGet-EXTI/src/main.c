@@ -36,17 +36,20 @@ static bool gbTcpConnection = false;
 /** Server host name. */
 static char server_host_name[] = MAIN_SERVER_NAME;
 
-
+#define TASK_GET_STACK_SIZE             (4096/sizeof(portSTACK_TYPE))
+#define TASK_GET_STACK_PRIORITY         (tskIDLE_PRIORITY)
 #define TASK_WIFI_STACK_SIZE            (4096/sizeof(portSTACK_TYPE))
-#define TASK_WIFI_STACK_PRIORITY        (tskIDLE_PRIORITY)
+#define TASK_WIFI_STACK_PRIORITY        (configMAX_PRIORITIES - 1)
 
-extern void vApplicationStackOverflowHook(xTaskHandle *pxTask,
-signed char *pcTaskName);
+extern void vApplicationStackOverflowHook(xTaskHandle *pxTask, signed char *pcTaskName);
 extern void vApplicationIdleHook(void);
 extern void vApplicationTickHook(void);
 extern void vApplicationMallocFailedHook(void);
 extern void xPortSysTickHandler(void);
 
+/* Criação dos semáforos */
+SemaphoreHandle_t xSemaphore_Wifi;
+SemaphoreHandle_t xSemaphore_Get;
 
 /**
  * \brief Called if stack overflow during execution
@@ -332,14 +335,58 @@ static void task_monitor(void *pvParameters)
 	}
 }
 
+/* Global variable between task_get and task_wifi */
+static struct sockaddr_in addr_in;
 
+static void task_get(void *pvParameters) {
+
+	const TickType_t xDelay = 5000;
+	BaseType_t xHigherPriorityTaskWoken = pdTRUE;
+	volatile bool isGetting = true;
+	xSemaphore_Get = xSemaphoreCreateBinary();
+
+	if (xSemaphore_Get == NULL) {
+		printf("FALHA - Nao foi possivel criar o semaforo do task_get \n");
+	}
+
+	for (;;) {
+		if (isGetting) {
+			/* Open client socket. */
+			if (tcp_client_socket < 0) {
+				printf("socket init \n");
+				if ((tcp_client_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+					printf("main: failed to create TCP client socket error!\r\n");
+				}
+
+				/* Connect server */
+				printf("socket connecting\n");
+				
+				if (connect(tcp_client_socket, (struct sockaddr *)&addr_in, sizeof(struct sockaddr_in)) != SOCK_ERR_NO_ERROR) {
+					close(tcp_client_socket);
+					tcp_client_socket = -1;
+					printf("error\n");
+					} else {
+					gbTcpConnection = true;
+				}
+			}
+			vTaskDelay(xDelay);
+		}
+	}
+}
 
 static void task_wifi(void *pvParameters) {
 	tstrWifiInitParam param;
 	int8_t ret;
 	uint8_t mac_addr[6];
 	uint8_t u8IsMacAddrValid;
-	struct sockaddr_in addr_in;
+
+	xSemaphore_Wifi = xSemaphoreCreateBinary();
+	BaseType_t xHigherPriorityTaskWoken = pdTRUE;
+	volatile bool isCreating = true;
+
+	if (xSemaphore_Wifi == NULL) {
+		printf("FALHA - Nao foi possivel criar o semaforo do task_wifi \n");
+	}
 	
 	/* Initialize the BSP. */
 	nm_bsp_init();
@@ -371,31 +418,26 @@ static void task_wifi(void *pvParameters) {
 	inet_aton(MAIN_SERVER_NAME, &addr_in.sin_addr);
 	printf("Inet aton : %d", addr_in.sin_addr);
 	
-  while(1){
-	  m2m_wifi_handle_events(NULL);
+	while(1){
+		m2m_wifi_handle_events(NULL);
 
-	  if (wifi_connected == M2M_WIFI_CONNECTED) {
-		  /* Open client socket. */
-		  if (tcp_client_socket < 0) {
-			  printf("socket init \n");
-			  if ((tcp_client_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-				  printf("main: failed to create TCP client socket error!\r\n");
-				  continue;
-			  }
-
-			  /* Connect server */
-			  printf("socket connecting\n");
-			  
-			  if (connect(tcp_client_socket, (struct sockaddr *)&addr_in, sizeof(struct sockaddr_in)) != SOCK_ERR_NO_ERROR) {
-				  close(tcp_client_socket);
-				  tcp_client_socket = -1;
-				  printf("error\n");
-				  }else{
-				  gbTcpConnection = true;
-			  }
-		  }
-	  }
-	  }
+		if (wifi_connected == M2M_WIFI_CONNECTED) {
+			xSemaphoreGiveFromISR(xSemaphore_Wifi, &xHigherPriorityTaskWoken);
+			printf("\nwifi connected! attempting to create get task...\n");
+			if (xSemaphoreTake(xSemaphore_Wifi, ( TickType_t ) 0) == pdTRUE ){
+				if (isCreating == true) {
+					if (xTaskCreate(task_get, "Get", TASK_GET_STACK_SIZE, NULL,
+					TASK_GET_STACK_PRIORITY, NULL) != pdPASS) {
+						printf("Failed to create Get task\r\n");
+						isCreating = true;
+					}
+					isCreating = false;
+				}
+			}
+		} else {
+			printf("Not connected...\n");
+		}
+	}
 }
 /**
  * \brief Main application function.
@@ -413,8 +455,7 @@ int main(void)
 	/* Initialize the UART console. */
 	configure_console();
 	printf(STRING_HEADER);
-	
-	
+
 	if (xTaskCreate(task_wifi, "Wifi", TASK_WIFI_STACK_SIZE, NULL,
 	TASK_WIFI_STACK_PRIORITY, NULL) != pdPASS) {
 		printf("Failed to create Wifi task\r\n");

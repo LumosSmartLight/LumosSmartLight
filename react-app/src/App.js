@@ -87,7 +87,7 @@ class App extends Component {
 
   componentWillMount() {
     firebase.initializeApp(config)
-    firebase.database().ref('luminosity').on('value', this.intensityStreamHandler )
+    firebase.database().ref('luminosity').on('value', this.intensityStreamHandler)
     firebase.database().ref('config').once('value', (snap) => {
       let v =  snap.val()
       console.log(v)
@@ -101,7 +101,7 @@ class App extends Component {
   }
 
   intensityStreamHandler = async (snapshot) => {
-    console.log('new data received')
+    console.log('new intensity data received')
     if (snapshot.val() === undefined || snapshot.val() === null) {
       return
     }
@@ -110,6 +110,7 @@ class App extends Component {
     let dataArray = Object.values(snapshot.val()).map((val) => {
       return {t: val.timestamp, y: val.value}
     })
+
     let labels = []
     for (let i = 0; i < dataArray.length; i++) {
       labels.push(parseInt(dataArray[i].t))
@@ -117,12 +118,10 @@ class App extends Component {
 
     let intensity = parseInt((dataArray[dataArray.length - 1].y - 10) / 3)
     let value = (100 - intensity) > 0 ? (100 - intensity) : 0
-    
-    // this.setIntensity(value)
 
     newChartData.chartData.labels = labels
     newChartData.chartData.datasets[0].data = dataArray
-    // console.log(dataArray, newState)
+
     this.setState(newChartData)
   }
 
@@ -136,7 +135,6 @@ class App extends Component {
   }
   
   onSlideStop = () => {
-
     this.setIntensity(this.state.intensity)
   }
 
