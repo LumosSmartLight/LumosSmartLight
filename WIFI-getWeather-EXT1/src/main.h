@@ -63,17 +63,21 @@ extern "C" {
 /** IP address parsing. */
 #define IPV4_BYTE(val, index)               ((val >> (index * 8)) & 0xFF)
 
-/** Send buffer of TCP socket. */
-#define MAIN_PREFIX_BUFFER                  "GET /data/2.5/weather?q="
-#define MAIN_POST_BUFFER                    "&appid=c592e14137c3471fa9627b44f6649db4&mode=xml&units=metric HTTP/1.1\r\nHost: api.openweathermap.org\r\nAccept: */*\r\n\r\n"
+/** Send buffer of TCP socket. 
+//#define MAIN_PREFIX_BUFFER                  "GET /data/2.5/weather?q="
+//#define MAIN_POST_BUFFER                    "&appid=c592e14137c3471fa9627b44f6649db4&mode=xml&units=metric HTTP/1.1\r\nHost: api.openweathermap.org\r\nAccept: */
 
-/** Weather information provider server. */
-#define MAIN_WEATHER_SERVER_NAME            "api.openweathermap.org"
+/** Weather information provider server. 
+//#define MAIN_WEATHER_SERVER_NAME            "api.openweathermap.org"
 
-/** Input City Name. */
-#define MAIN_CITY_NAME                      "Sorocaba"
+/** Input City Name. 
+//#define MAIN_CITY_NAME                      "Sorocaba"
 
 /** Receive buffer size. */
+
+//#define MAIN_PORT 5000
+#define MAIN_WEATHER_SERVER_NAME            "192.168.43.99"
+#define MAIN_LOCALHOST "192.168.43.99:5000/api/getconfig"
 #define MAIN_WIFI_M2M_BUFFER_SIZE           1400
 
 #define MAIN_HEX2ASCII(x)                   (((x) >= 10) ? (((x) - 10) + 'A') : ((x) + '0'))
