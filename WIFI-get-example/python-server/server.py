@@ -45,6 +45,6 @@ class LumosAPI(Resource):
 api.add_resource(LumosAPI, '/')
 
 if __name__ == '__main__':
-    app.run(host='192.168.43.99',debug=True) #Change host to internal IP
+    app.run(host='localhost',debug=True) #Change host to internal IP
     #app.run(debug=True)
 

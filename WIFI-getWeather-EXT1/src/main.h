@@ -76,8 +76,8 @@ extern "C" {
 /** Receive buffer size. */
 
 //#define MAIN_PORT 5000
-#define MAIN_WEATHER_SERVER_NAME            "192.168.43.99"
-#define MAIN_LOCALHOST "192.168.43.99:5000/api/getconfig"
+#define MAIN_WEATHER_SERVER_NAME            "localhost"
+#define MAIN_LOCALHOST						"localhost:5000/"
 #define MAIN_WIFI_M2M_BUFFER_SIZE           1400
 
 #define MAIN_HEX2ASCII(x)                   (((x) >= 10) ? (((x) - 10) + 'A') : ((x) + '0'))
