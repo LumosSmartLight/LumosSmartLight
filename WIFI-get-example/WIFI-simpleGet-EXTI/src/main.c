@@ -146,6 +146,8 @@ static void resolve_cb(uint8_t *hostName, uint32_t hostIp)
  */
 static void socket_cb(SOCKET sock, uint8_t u8Msg, void *pvMsg)
 {
+	char endpoint[256];
+	
   
 	/* Check for socket event on TCP socket. */
 	if (sock == tcp_client_socket) {
@@ -156,7 +158,9 @@ static void socket_cb(SOCKET sock, uint8_t u8Msg, void *pvMsg)
       printf("socket_msg_connect\n"); 
 			if (gbTcpConnection) {
 				memset(gau8ReceivedBuffer, 0, sizeof(gau8ReceivedBuffer));
-				sprintf((char *)gau8ReceivedBuffer, "%s", MAIN_PREFIX_BUFFER);
+				sprintf((char *)gau8ReceivedBuffer, "GET /api/config HTTP/1.1\r\n Accept: */*\r\n\r\n");
+				delay_ms(5000);
+				//sprintf((char *)gau8ReceivedBuffer, "%s", MAIN_PREFIX_BUFFER);
 
 				tstrSocketConnectMsg *pstrConnect = (tstrSocketConnectMsg *)pvMsg;
 				if (pstrConnect && pstrConnect->s8Error >= SOCK_ERR_NO_ERROR) {
@@ -317,28 +321,29 @@ int main(void)
   while(1){
  		m2m_wifi_handle_events(NULL);
 
-   		if (wifi_connected == M2M_WIFI_CONNECTED) {  
-    		/* Open client socket. */
+   	if (wifi_connected == M2M_WIFI_CONNECTED) {  
+    	/* Open client socket. */
 			if (tcp_client_socket < 0) {
-			printf("socket init \n");
+        printf("socket init \n");
 				if ((tcp_client_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
 					printf("main: failed to create TCP client socket error!\r\n");
 					continue;
 				}
 
-			/* Connect server */
-			printf("socket connecting\n");
+				/* Connect server */
+        printf("socket connecting\n");
         
-			if (connect(tcp_client_socket, (struct sockaddr *)&addr_in, sizeof(struct sockaddr_in)) != SOCK_ERR_NO_ERROR) {
-				close(tcp_client_socket);
-				tcp_client_socket = -1;
-				printf("error\n");
-			} else {
-				gbTcpConnection = true;
+				if (connect(tcp_client_socket, (struct sockaddr *)&addr_in, sizeof(struct sockaddr_in)) != SOCK_ERR_NO_ERROR) {
+					close(tcp_client_socket);
+					tcp_client_socket = -1;
+          printf("error\n");
+				}else{
+          gbTcpConnection = true;
+        }
 			}
-		}
-	}
-}
+    }
+  }
+
 
 	return 0;
 }
