@@ -48,9 +48,9 @@ extern "C" {
 #include "driver/include/m2m_wifi.h"
 
 /** Wi-Fi Settings */
-#define MAIN_WLAN_SSID                    "Tirta" /**< Destination SSID */
+#define MAIN_WLAN_SSID                    "Nebraska" /**< Destination SSID */
 #define MAIN_WLAN_AUTH                    M2M_WIFI_SEC_WPA_PSK /**< Security manner */
-#define MAIN_WLAN_PSK                     "tirtop88" /**< Password for Destination SSID */
+#define MAIN_WLAN_PSK                     "internet" /**< Password for Destination SSID */
 
 /** Using broadcast address for simplicity. */
 #define MAIN_SERVER_PORT                    (5000)
@@ -62,7 +62,7 @@ extern "C" {
 #define MAIN_PREFIX_BUFFER                  "GET / HTTP/1.1\r\n Accept: */*\r\n\r\n"
 
 /** Weather information provider server. */
-#define MAIN_SERVER_NAME                    "192.168.43.247"
+#define MAIN_SERVER_NAME                    "192.168.1.36"
 
 /** Receive buffer size. */
 #define MAIN_WIFI_M2M_BUFFER_SIZE           1400

@@ -36,10 +36,10 @@ static bool gbTcpConnection = false;
 /** Server host name. */
 static char server_host_name[] = MAIN_SERVER_NAME;
 
-#define TASK_GET_STACK_SIZE             (4096/sizeof(portSTACK_TYPE))
+#define TASK_GET_STACK_SIZE             (2018/sizeof(portSTACK_TYPE))
 #define TASK_GET_STACK_PRIORITY         (tskIDLE_PRIORITY)
-#define TASK_WIFI_STACK_SIZE            (4096/sizeof(portSTACK_TYPE))
-#define TASK_WIFI_STACK_PRIORITY        (configMAX_PRIORITIES - 1)
+#define TASK_WIFI_STACK_SIZE            (1024/sizeof(portSTACK_TYPE))
+#define TASK_WIFI_STACK_PRIORITY        (tskIDLE_PRIORITY)
 
 extern void vApplicationStackOverflowHook(xTaskHandle *pxTask, signed char *pcTaskName);
 extern void vApplicationIdleHook(void);
@@ -340,48 +340,63 @@ static struct sockaddr_in addr_in;
 
 static void task_get(void *pvParameters) {
 
-	const TickType_t xDelay = 5000;
+	const TickType_t xDelay = 10000/portTICK_PERIOD_MS;
 	BaseType_t xHigherPriorityTaskWoken = pdTRUE;
 	volatile bool isGetting = true;
 	xSemaphore_Get = xSemaphoreCreateBinary();
 
+	//while(1){
+		//printf("ta na task_get\n");
+	//}
+	
+	//printf("ta na task_get\n");
 	if (xSemaphore_Get == NULL) {
 		printf("FALHA - Nao foi possivel criar o semaforo do task_get \n");
 	}
+	
+	else{
+		for (;;) {
+			printf("ta na task\n");
+			if (isGetting == true) {
+				printf("ta na task 123\n");
+				/* Open client socket. */
+				if (tcp_client_socket < 0) {
+					//while(1){
+					printf("socket init \n");//}
+					if ((tcp_client_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+						printf("main: failed to create TCP client socket error!\r\n");
+					}
 
-	for (;;) {
-		if (isGetting) {
-			/* Open client socket. */
-			if (tcp_client_socket < 0) {
-				printf("socket init \n");
-				if ((tcp_client_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-					printf("main: failed to create TCP client socket error!\r\n");
+					/* Connect server */
+					printf("socket connecting\n");
+					
+					if (connect(tcp_client_socket, (struct sockaddr *)&addr_in, sizeof(struct sockaddr_in)) != SOCK_ERR_NO_ERROR) {
+						close(tcp_client_socket);
+						tcp_client_socket = -1;
+						printf("error\n");
+						} else {
+							gbTcpConnection = true;
+							//while(1){
+								printf("socket connected\n");
+							//}
+					}
 				}
-
-				/* Connect server */
-				printf("socket connecting\n");
-				
-				if (connect(tcp_client_socket, (struct sockaddr *)&addr_in, sizeof(struct sockaddr_in)) != SOCK_ERR_NO_ERROR) {
-					close(tcp_client_socket);
-					tcp_client_socket = -1;
-					printf("error\n");
-					} else {
-					gbTcpConnection = true;
-				}
+				vTaskDelay(xDelay);
 			}
-			vTaskDelay(xDelay);
-		}
+	}
+	
 	}
 }
 
 static void task_wifi(void *pvParameters) {
+	
+	const TickType_t xDelay = 10000/portTICK_PERIOD_MS;
 	tstrWifiInitParam param;
 	int8_t ret;
 	uint8_t mac_addr[6];
 	uint8_t u8IsMacAddrValid;
-
-	xSemaphore_Wifi = xSemaphoreCreateBinary();
 	BaseType_t xHigherPriorityTaskWoken = pdTRUE;
+	xSemaphore_Wifi = xSemaphoreCreateBinary();
 	volatile bool isCreating = true;
 
 	if (xSemaphore_Wifi == NULL) {
@@ -420,21 +435,30 @@ static void task_wifi(void *pvParameters) {
 	
 	while(1){
 		m2m_wifi_handle_events(NULL);
-
 		if (wifi_connected == M2M_WIFI_CONNECTED) {
 			xSemaphoreGiveFromISR(xSemaphore_Wifi, &xHigherPriorityTaskWoken);
-			printf("\nwifi connected! attempting to create get task...\n");
+			printf("\nwifi connected! attempting to create ...\n");
 			if (xSemaphoreTake(xSemaphore_Wifi, ( TickType_t ) 0) == pdTRUE ){
 				if (isCreating == true) {
 					if (xTaskCreate(task_get, "Get", TASK_GET_STACK_SIZE, NULL,
 					TASK_GET_STACK_PRIORITY, NULL) != pdPASS) {
 						printf("Failed to create Get task\r\n");
-						isCreating = true;
 					}
-					isCreating = false;
+					else{
+						
+						isCreating = false;
+						printf("criou\n");
+						//break;
+						
+					}
 				}
-			}
-		} else {
+				else{
+					xSemaphoreGiveFromISR(xSemaphore_Get, &xHigherPriorityTaskWoken);
+				}
+			}	
+			vTaskDelay(xDelay);
+		} 
+		else {
 			printf("Not connected...\n");
 		}
 	}
