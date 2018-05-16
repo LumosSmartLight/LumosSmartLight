@@ -20,15 +20,14 @@
 #define LED3_PIN		   4
 #define LED3_PIN_MASK   (1<<LED3_PIN)
 
-#define ERASE 0x00000000
-#define GREEN 0x00110000
-#define BLUE 0x00000011
-#define RED 0x00001100
+#define NUM_LEDS 24
 
-#define INTERVAL 500
+#define ERASE 0x00000000
+#define BLUE 0x00FF0000
+#define GREEN 0x000000FF
+#define RED 0x0000FF00
 
 volatile uint32_t buffer[24];
-
 
 
 void LED_init(int estado){
@@ -37,19 +36,21 @@ void LED_init(int estado){
 };
 
 void send_0(){
-	for (int i = 0; i<26; i++);
+	int i = 0;
+	for(i=0; i<26; i++)	
 	LED3_PIO->PIO_SODR = LED3_PIN_MASK;
 	
-	for(int j = 0; j<59; j++);
+	for(i=0; i<59; i++) 
 	LED3_PIO->PIO_CODR = LED3_PIN_MASK;
 	
 }
 
 void send_1(){
-	for (int i = 0; i<52; i++);
+	int i = 0;
+	for(i=0; i<52; i++) 
 	LED3_PIO->PIO_SODR = LED3_PIN_MASK;
-	
-	for (int i = 0; i<44; i++);
+
+	for(i=0; i<44; i++) 
 	LED3_PIO->PIO_CODR = LED3_PIN_MASK;
 	
 }
@@ -60,43 +61,57 @@ void reveal(){
 }
 
 
-void sendB(uint32_t p){
-	for (int i = 23; i >= 0; i--){
+void send_pixel(uint32_t p){
+	for (int i = 0; i < NUM_LEDS; i++){
 		if(p >> i & 0x00000001){
-			//if(i > 8){
-				send_1();
-			//}
-			
+			send_1();
 		}
 		else{
-			//if(i > 8){
-				send_0();
-			//}
+			send_0();
 		}
-		
-	}
-	
+	}	
 }
 
-void refresh(){
-	for(int i = 0; i <= 23; i++){
-		sendB(ERASE);
+void reset(){
+	for(int i = 0; i < NUM_LEDS; i++){
+		send_pixel(ERASE);
 	}
 	reveal();
 }
 
 void initialize_buffer(){
-	for(int i = 23; i > 0; i++){
+	for(int i = 0; i < NUM_LEDS; i++){
 		buffer[i] = ERASE;
 	}
 }
 
 void send_buffer(){
-	buffer[11] = RED;
-	for(int i = 23; i > 0; i++){
-		sendB(buffer[i]);
+	reset();
+	for(int i = 0; i < NUM_LEDS; i++){
+		send_pixel(buffer[i]);
+	}
+	reveal();
+}
+
+void frenetic(){
+	uint32_t buffer_copy[NUM_LEDS];
+	for(int i = 0; i < NUM_LEDS; i++){
+		buffer_copy[(i+1)%NUM_LEDS] = buffer[i];
+	}
+	for(int j = 0; j < NUM_LEDS; j++){
+		buffer[j] = buffer_copy[j];
 	}
 }
+
+uint32_t rgb (int r, int g, int b){
+	uint32_t result = 0;
+	result = b << 16 | r << 8 | g << 0;
+	return result;
+	
+}
+
+
+
 
 /************************************************************************/
 /* Main Code	                                                        */
@@ -111,10 +126,19 @@ int main(void){
 	/* Configura Leds */
 	LED_init(0);
 	LED3_PIO->PIO_CODR = LED3_PIN_MASK;
-	refresh();
-	sendB(BLUE);
-	reveal();
+	initialize_buffer();
+	buffer[10] = rgb(0,0,255);
+	buffer[12] = rgb(0,255,0);
+	buffer[14] = rgb(255,0,0);
+	send_buffer();
+	//uint32_t top = rgb(255,0,0);
+	
+	
 	while (1) {
+		
+		
+
+		
 		
 		//pmc_sleep(SAM_PM_SMODE_SLEEP_WFI);
 		/* Entrar em modo sleep */
