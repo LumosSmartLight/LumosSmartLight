@@ -1,12 +1,15 @@
 #include "asf.h"
 #include "main.h"
 #include <string.h>
+#include <jsmn.h>
 #include "bsp/include/nm_bsp.h"
 #include "driver/include/m2m_wifi.h"
 #include "socket/include/socket.h"
 
+
+
 #define STRING_EOL    "\r\n"
-#define STRING_HEADER "-- WINC1500 weather client example --"STRING_EOL	\
+#define STRING_HEADER "-- Lumos Smart Light running --"STRING_EOL	\
 	"-- "BOARD_NAME " --"STRING_EOL	\
 	"-- Compiled: "__DATE__ " "__TIME__ " --"STRING_EOL
 
@@ -19,13 +22,14 @@ static SOCKET tcp_client_socket = -1;
 /** Receive buffer definition. */
 static uint8_t gau8ReceivedBuffer[MAIN_WIFI_M2M_BUFFER_SIZE] = {0};
 
+
 /** Wi-Fi status variable. */
 static bool gbConnectedWifi = false;
 
 /** Get host IP status variable. */
 /** Wi-Fi connection state */
 static uint8_t wifi_connected;
-volatile uint8_t intensity = 0;
+
 
 /** Instance of HTTP client module. */
 static bool gbHostIpByName = false;
@@ -36,20 +40,24 @@ static bool gbTcpConnection = false;
 /** Server host name. */
 static char server_host_name[] = MAIN_SERVER_NAME;
 
-#define TASK_GET_STACK_SIZE             (2018/sizeof(portSTACK_TYPE))
-#define TASK_GET_STACK_PRIORITY         (tskIDLE_PRIORITY)
-#define TASK_WIFI_STACK_SIZE            (1024/sizeof(portSTACK_TYPE))
+
+#define TASK_WIFI_STACK_SIZE            (8192/sizeof(portSTACK_TYPE))
 #define TASK_WIFI_STACK_PRIORITY        (tskIDLE_PRIORITY)
 
-extern void vApplicationStackOverflowHook(xTaskHandle *pxTask, signed char *pcTaskName);
+volatile int intensity;
+volatile int mode;
+volatile bool ison;
+
+char JSON_STRING[200];
+
+
+extern void vApplicationStackOverflowHook(xTaskHandle *pxTask,
+signed char *pcTaskName);
 extern void vApplicationIdleHook(void);
 extern void vApplicationTickHook(void);
 extern void vApplicationMallocFailedHook(void);
 extern void xPortSysTickHandler(void);
 
-/* Criação dos semáforos */
-SemaphoreHandle_t xSemaphore_Wifi;
-SemaphoreHandle_t xSemaphore_Get;
 
 /**
  * \brief Called if stack overflow during execution
@@ -174,6 +182,83 @@ int inet_aton(const char *cp, in_addr *ap)
 }
 
 
+
+/*
+ * A small example of jsmn parsing when JSON structure is known and number of
+ * tokens is predictable.
+ */
+
+
+static int jsoneq(const char *json, jsmntok_t *tok, const char *s) {
+	if (tok->type == JSMN_STRING && (int) strlen(s) == tok->end - tok->start &&
+			strncmp(json + tok->start, s, tok->end - tok->start) == 0) {
+		return 0;
+	}
+	return -1;
+}
+
+int json_parse() {
+	int i;
+	int r;
+	jsmn_parser p;
+	jsmntok_t t[128]; /* We expect no more than 128 tokens */
+	
+	jsmn_init(&p);
+	r = jsmn_parse(&p, JSON_STRING, strlen(JSON_STRING), t, sizeof(t)/sizeof(t[0]));
+	if (r < 0) {
+		printf("Failed to parse JSON: %d\n", r);
+		return 1;
+	}
+	printf(JSON_STRING);
+
+	/* Assume the top-level element is an object*/ 
+	if (r < 1 || t[0].type != JSMN_OBJECT) {
+		printf("Object expected\n");
+		return 1;
+	}
+	
+	
+	/* Loop over all keys of the root object */
+	for (i = 1; i < r; i++) {
+		if (jsoneq(JSON_STRING, &t[i], "intensity") == 0) {
+			/* We may use strndup() to fetch string value */
+			//printf("- intensity: %.*s\n", t[i+1].end-t[i+1].start,
+					//JSON_STRING + t[i+1].start);
+			intensity = atoi(JSON_STRING + t[i+1].start);
+			printf("\nintensity: %d\n", intensity);
+			i++;
+		} else if (jsoneq(JSON_STRING, &t[i], "mode") == 0) {
+			/* We may additionally check if the value is either "true" or "false" */
+			//printf("- mode: %.*s\n", t[i+1].end-t[i+1].start,
+					//JSON_STRING + t[i+1].start);
+			mode = atoi(JSON_STRING + t[i+1].start);
+			printf("mode: %d\n", mode);
+			i++;
+		} else if (jsoneq(JSON_STRING, &t[i], "ison") == 0) {
+			/* We may want to do strtol() here to get numeric value */
+			printf("- ison .*s : %.*s\n", t[i+1].end-t[i+1].start, JSON_STRING + t[i+1].start);
+			printf("- ison: %s\n",JSON_STRING + t[i+1].start);
+			char *liga; 
+			liga = JSON_STRING + t[i+1].start;
+			printf("%s \n",liga);
+			if (strcmp("false}",liga) == 0){
+				printf("sou false\n");
+				ison = false;
+			} else {
+				printf("sou true\n");
+				ison = true;
+			}
+			printf("ison: %d\n", ison);
+			i++;
+		} else {
+			printf("Unexpected key: %.*s\n", t[i].end-t[i].start,
+					JSON_STRING + t[i].start);
+		}
+	}
+	return 0;
+}
+
+
 /**
  * \brief Callback function of IP address.
  *
@@ -205,7 +290,7 @@ static void socket_cb(SOCKET sock, uint8_t u8Msg, void *pvMsg)
   
 	/* Check for socket event on TCP socket. */
 	if (sock == tcp_client_socket) {
-    
+		const TickType_t xDelay = 5000/portTICK_PERIOD_MS;
 		switch (u8Msg) {
 		case SOCKET_MSG_CONNECT:
 		{
@@ -214,6 +299,7 @@ static void socket_cb(SOCKET sock, uint8_t u8Msg, void *pvMsg)
 				memset(gau8ReceivedBuffer, 0, sizeof(gau8ReceivedBuffer));
 				//sprintf((char *)gau8ReceivedBuffer, "%s", MAIN_PREFIX_BUFFER);
 				sprintf((char *)gau8ReceivedBuffer, "GET /api/getconfig HTTP/1.1\r\n Accept: */*\r\n\r\n");
+				
 
 				tstrSocketConnectMsg *pstrConnect = (tstrSocketConnectMsg *)pvMsg;
 				if (pstrConnect && pstrConnect->s8Error >= SOCK_ERR_NO_ERROR) {
@@ -229,6 +315,7 @@ static void socket_cb(SOCKET sock, uint8_t u8Msg, void *pvMsg)
 					tcp_client_socket = -1;
 				}
 			}
+			vTaskDelay(xDelay);
 		}
 		break;
     
@@ -241,10 +328,19 @@ static void socket_cb(SOCKET sock, uint8_t u8Msg, void *pvMsg)
 
 			tstrSocketRecvMsg *pstrRecv = (tstrSocketRecvMsg *)pvMsg;
 			if (pstrRecv && pstrRecv->s16BufferSize > 0) {
-				printf(pstrRecv->pu8Buffer);
+				//printf(pstrRecv->pu8Buffer);
+				
+				char *findjson = strstr(pstrRecv->pu8Buffer, "{");
+					
+				if(findjson){
+				    strcpy(&JSON_STRING, findjson);
+					printf(JSON_STRING);
+					json_parse();
+				}
 				
 				memset(gau8ReceivedBuffer, 0, sizeof(gau8ReceivedBuffer));
 				recv(tcp_client_socket, &gau8ReceivedBuffer[0], MAIN_WIFI_M2M_BUFFER_SIZE, 0);
+				
 			} else {
 				printf("socket_cb: recv error!\r\n");
 				close(tcp_client_socket);
@@ -335,73 +431,14 @@ static void task_monitor(void *pvParameters)
 	}
 }
 
-/* Global variable between task_get and task_wifi */
-static struct sockaddr_in addr_in;
 
-static void task_get(void *pvParameters) {
-
-	const TickType_t xDelay = 10000/portTICK_PERIOD_MS;
-	BaseType_t xHigherPriorityTaskWoken = pdTRUE;
-	volatile bool isGetting = true;
-	xSemaphore_Get = xSemaphoreCreateBinary();
-
-	//while(1){
-		//printf("ta na task_get\n");
-	//}
-	
-	//printf("ta na task_get\n");
-	if (xSemaphore_Get == NULL) {
-		printf("FALHA - Nao foi possivel criar o semaforo do task_get \n");
-	}
-	
-	else{
-		for (;;) {
-			printf("ta na task\n");
-			if (isGetting == true) {
-				printf("ta na task 123\n");
-				/* Open client socket. */
-				if (tcp_client_socket < 0) {
-					//while(1){
-					printf("socket init \n");//}
-					if ((tcp_client_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-						printf("main: failed to create TCP client socket error!\r\n");
-					}
-
-					/* Connect server */
-					printf("socket connecting\n");
-					
-					if (connect(tcp_client_socket, (struct sockaddr *)&addr_in, sizeof(struct sockaddr_in)) != SOCK_ERR_NO_ERROR) {
-						close(tcp_client_socket);
-						tcp_client_socket = -1;
-						printf("error\n");
-						} else {
-							gbTcpConnection = true;
-							//while(1){
-								printf("socket connected\n");
-							//}
-					}
-				}
-				vTaskDelay(xDelay);
-			}
-	}
-	
-	}
-}
 
 static void task_wifi(void *pvParameters) {
-	
-	const TickType_t xDelay = 10000/portTICK_PERIOD_MS;
 	tstrWifiInitParam param;
 	int8_t ret;
 	uint8_t mac_addr[6];
 	uint8_t u8IsMacAddrValid;
-	BaseType_t xHigherPriorityTaskWoken = pdTRUE;
-	xSemaphore_Wifi = xSemaphoreCreateBinary();
-	volatile bool isCreating = true;
-
-	if (xSemaphore_Wifi == NULL) {
-		printf("FALHA - Nao foi possivel criar o semaforo do task_wifi \n");
-	}
+	struct sockaddr_in addr_in;
 	
 	/* Initialize the BSP. */
 	nm_bsp_init();
@@ -433,35 +470,31 @@ static void task_wifi(void *pvParameters) {
 	inet_aton(MAIN_SERVER_NAME, &addr_in.sin_addr);
 	printf("Inet aton : %d", addr_in.sin_addr);
 	
-	while(1){
-		m2m_wifi_handle_events(NULL);
-		if (wifi_connected == M2M_WIFI_CONNECTED) {
-			xSemaphoreGiveFromISR(xSemaphore_Wifi, &xHigherPriorityTaskWoken);
-			printf("\nwifi connected! attempting to create ...\n");
-			if (xSemaphoreTake(xSemaphore_Wifi, ( TickType_t ) 0) == pdTRUE ){
-				if (isCreating == true) {
-					if (xTaskCreate(task_get, "Get", TASK_GET_STACK_SIZE, NULL,
-					TASK_GET_STACK_PRIORITY, NULL) != pdPASS) {
-						printf("Failed to create Get task\r\n");
-					}
-					else{
-						
-						isCreating = false;
-						printf("criou\n");
-						//break;
-						
-					}
-				}
-				else{
-					xSemaphoreGiveFromISR(xSemaphore_Get, &xHigherPriorityTaskWoken);
-				}
-			}	
-			vTaskDelay(xDelay);
-		} 
-		else {
-			printf("Not connected...\n");
-		}
-	}
+  while(1){
+	  m2m_wifi_handle_events(NULL);
+
+	  if (wifi_connected == M2M_WIFI_CONNECTED) {
+		  /* Open client socket. */
+		  if (tcp_client_socket < 0) {
+			  printf("socket init \n");
+			  if ((tcp_client_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+				  printf("main: failed to create TCP client socket error!\r\n");
+				  continue;
+			  }
+
+			  /* Connect server */
+			  printf("socket connecting\n");
+			  
+			  if (connect(tcp_client_socket, (struct sockaddr *)&addr_in, sizeof(struct sockaddr_in)) != SOCK_ERR_NO_ERROR) {
+				  close(tcp_client_socket);
+				  tcp_client_socket = -1;
+				  printf("error\n");
+				  }else{
+				  gbTcpConnection = true;
+			  }
+		  }
+	  }
+	  }
 }
 /**
  * \brief Main application function.
@@ -479,7 +512,8 @@ int main(void)
 	/* Initialize the UART console. */
 	configure_console();
 	printf(STRING_HEADER);
-
+	
+	
 	if (xTaskCreate(task_wifi, "Wifi", TASK_WIFI_STACK_SIZE, NULL,
 	TASK_WIFI_STACK_PRIORITY, NULL) != pdPASS) {
 		printf("Failed to create Wifi task\r\n");

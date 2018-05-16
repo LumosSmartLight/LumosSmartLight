@@ -814,6 +814,12 @@
     <None Include="src\config\FreeRTOSConfig.h">
       <SubType>compile</SubType>
     </None>
+    <Compile Include="src\jsmn.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\jsmn.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\main.h">
       <SubType>compile</SubType>
     </Compile>
