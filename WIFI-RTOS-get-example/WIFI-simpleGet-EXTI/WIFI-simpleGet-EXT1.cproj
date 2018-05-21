@@ -511,7 +511,6 @@
       <Value>BOARD=SAME70_XPLAINED</Value>
       <Value>scanf=iscanf</Value>
       <Value>ARM_MATH_CM7=true</Value>
-      <Value>printf=iprintf</Value>
       <Value>__FREERTOS__</Value>
     </ListValues>
   </armgcc.compiler.symbols.DefSymbols>
@@ -570,6 +569,7 @@
     </ListValues>
   </armgcc.linker.libraries.LibrarySearchPaths>
   <armgcc.linker.optimization.GarbageCollectUnusedSections>True</armgcc.linker.optimization.GarbageCollectUnusedSections>
+  <armgcc.linker.memorysettings.ExternalRAM />
   <armgcc.linker.miscellaneous.LinkerFlags>-Wl,--entry=Reset_Handler -Wl,--cref -mthumb -T../src/ASF/sam/utils/linker_scripts/same70/same70q21/gcc/flash.ld</armgcc.linker.miscellaneous.LinkerFlags>
   <armgcc.assembler.general.IncludePaths>
     <ListValues>
@@ -814,6 +814,12 @@
     <None Include="src\config\FreeRTOSConfig.h">
       <SubType>compile</SubType>
     </None>
+    <Compile Include="src\DHT.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\DHT.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\jsmn.c">
       <SubType>compile</SubType>
     </Compile>

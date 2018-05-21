@@ -18,6 +18,8 @@ src\ASF\thirdparty\freertos\freertos-8.2.3\Source\tasks.c
 
 src\ASF\thirdparty\freertos\freertos-8.2.3\Source\timers.c
 
+src\DHT.c
+
 src\jsmn.c
 
 src\ASF\common\components\wifi\winc1500\bsp\source\nm_bsp_same70.c

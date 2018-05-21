@@ -5,6 +5,21 @@
 #include "bsp/include/nm_bsp.h"
 #include "driver/include/m2m_wifi.h"
 #include "socket/include/socket.h"
+#include "DHT.h"
+
+
+//sensores
+#define DHT_PIO PIOC
+#define DHT_PIO_ID 12
+#define DHT_PIO_PIN 13
+#define DHT_PIO_PIN_MASK (1 << DHT_PIO_PIN)
+
+
+#define TEMT_PIO PIOD
+#define TEMT_PIO_ID 11
+#define TEMT_PIO_PIN 30
+#define TEMT_PIO_PIN_MASK (1 << TEMT_PIO_PIN)
+
 
 
 
@@ -513,15 +528,35 @@ int main(void)
 	configure_console();
 	printf(STRING_HEADER);
 	
+	enum DHT_Status_t __DHT_STATUS;
 	
-	if (xTaskCreate(task_wifi, "Wifi", TASK_WIFI_STACK_SIZE, NULL,
-	TASK_WIFI_STACK_PRIORITY, NULL) != pdPASS) {
-		printf("Failed to create Wifi task\r\n");
-	}
-
-	vTaskStartScheduler();
+	//double temp[1], hum[1];
+	//temp[0] = hum[0] = 0;
+	//double *temp = 0;
+	//double *hum = 0;
 	
-	while(1) {};
+	DHT_Setup();
+	
+	
+	//if (xTaskCreate(task_wifi, "Wifi", TASK_WIFI_STACK_SIZE, NULL,
+	//TASK_WIFI_STACK_PRIORITY, NULL) != pdPASS) {
+		//printf("Failed to create Wifi task\r\n");
+	//}
+//
+	//vTaskStartScheduler();
+	
+	double temp, hum;
+	while(1) {
+		DHT_Read(&temp, &hum);
+		//Check status
+		//printf(temp);
+		delay_ms(2000);
+		printf("Temperatura: %lf \n", temp);
+		delay_ms(2000);
+		//Print humidity
+		printf("Humidade: %lf \n", hum);
+		//Sensor needs 1-2s to stabilize its reading
+		delay_ms(2000);
+	};
 	return 0;
-
 }
