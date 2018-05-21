@@ -6,7 +6,7 @@ import Slider from 'material-ui/Slider';
 import Toggle from 'material-ui/Toggle';
 import RaisedButton from 'material-ui/RaisedButton';
 import { RadioButton, RadioButtonGroup } from 'material-ui/RadioButton';
-import {config} from './config/firebase'
+import { config } from './config/firebase'
 import { Card } from 'material-ui';
 import { Line } from 'react-chartjs-2'
 import moment from 'moment'
@@ -16,13 +16,17 @@ class App extends Component {
     super(props)
     this.state = {
       intensity: 0,
-      isToggled: true,
-      isLoaded: false,
       mode: 1,
+      isToggled: true,
+      colors: {
+          r: 0,
+          g: 0,
+          b: 255
+      },
+      isLoaded: false,
       chartData: {
         labels: [],
-        datasets: [
-          {
+        datasets: [{
             label: 'Luminosidade',
             fill: false,
             lineTension: 0.1,
@@ -42,8 +46,7 @@ class App extends Component {
             pointRadius: 1,
             pointHitRadius: 10,
             data: []
-          }
-        ]
+        }]
       }
     }
 
@@ -95,6 +98,11 @@ class App extends Component {
         isToggled : Boolean(v.ison), 
         intensity : parseInt(100 * v.intensity / 1024),
         mode: v.mode,
+        colors: {
+          r: v.colors.r,
+          g: v.colors.g,
+          b: v.colors.b
+        },
         isLoaded: true
       })
     })
@@ -130,12 +138,27 @@ class App extends Component {
     firebase.database().ref('config/intensity').set(parseInt(value))
   } 
 
-  onSlide = (e, value) => {
+  onIntensitySlide = (e, value) => {
     this.setState({intensity: value})
   }
   
-  onSlideStop = () => {
+  onIntensitySlideStop = () => {
     this.setIntensity(this.state.intensity)
+  }
+
+  // Todo: better color slide implementation
+  onColorRedSlide = (e, value) => {
+    this.setState({colors: {r: value, g: this.state.colors.g, b: this.state.colors.b}})
+  }
+  onColorGreenSlide = (e, value) => {
+    this.setState({colors: {r: this.state.colors.r, g: value, b: this.state.colors.b}})
+  }
+  onColorBlueSlide = (e, value) => {
+    this.setState({colors: {r: this.state.colors.r, g: this.state.colors.g, b: value}})
+  }
+  
+  onColorSlideStop = () => {
+    firebase.database().ref('config/colors').set(this.state.colors)
   }
 
   onToggle = (e) => {
@@ -171,6 +194,10 @@ class App extends Component {
       },
       toggle: {
         marginBottom: 16,
+      },
+      blueslider: {
+        selectionColor: '#00FFFF',
+        handleFillColor: '#00FFFF'
       }
     };
 
@@ -184,14 +211,18 @@ class App extends Component {
           <div className='slider-container'>
             <h1 style={{ textAlign: 'left', fontSize: 22 }}> Intensity <span className='intensity' style={{ color: getColor() }}> {parseInt(this.state.intensity)}% </span>
               <Toggle className='toggleOnOff'
-                // label={this.state.isToggled ? 'Ligado' : 'Desligado'}
                 style={styles.toggle}
                 toggled={this.state.isToggled}
                 defaultToggled={true}
                 onToggle={this.onToggle}
               />
             </h1>
-            <Slider step={1} min={0} max={100} value={this.state.intensity} onChange={this.onSlide} onDragStop={this.onSlideStop} />
+            <Slider name="intensity" step={1} min={0} max={100} value={this.state.intensity} onChange={this.onIntensitySlide} onDragStop={this.onIntensitySlideStop} />
+
+            <h1 style={{ textAlign: 'left', fontSize: 22 }}> RGB </h1>
+            <Slider sliderStyle={styles.blueslider} name="red" step={1} min={0} max={255} value={this.state.colors.r} onChange={this.onColorRedSlide} onDragStop={this.onColorSlideStop} />
+            <Slider name="green" step={1} min={0} max={255} value={this.state.colors.g} onChange={this.onColorGreenSlide} onDragStop={this.onColorSlideStop.bind(this, "g")} />
+            <Slider name="blue" step={1} min={0} max={255} value={this.state.colors.b} onChange={this.onColorBlueSlide} onDragStop={this.onColorSlideStop.bind(this, "b")} />
 
             <RadioButtonGroup name="lightmode" defaultSelected={this.state.mode} valueSelected={this.state.mode} onChange={this.onModeChange}>
               <RadioButton
