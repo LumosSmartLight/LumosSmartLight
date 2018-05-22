@@ -12,39 +12,20 @@ class LumosAPI(Resource):
     def getConfig():
         result = firebase.get('/config', None)
         print(result)
-        intensity = result['intensity']
         return json.dumps(result)
 
-    @app.route('/api/setconfig', methods=['PUT'])
-    def setConfig():
-        new_intensity = request['intensity']
-        new_ison = request['ison']
-        new_mode = request['mode']
+    @app.route('/api/sendDht', methods=['GET'])
+    #URL Example: http://localhost:5000/api/sendDht?temp=25.3&hum=53.7
+    def sendDHT():
+        temperature = request.args.get('temp', default = 1.0, type = float)
+        humidity = request.args.get('hum', default = 1.0, type = float)
+        print(temperature, humidity)
+        firebase.post('/temperature', temperature)
+        firebase.post('/humidity', humidity)
+        return "new temperature and humidity data sent"
         
-
-        new_config = {
-            'intensity': str(new_intensity),
-            'ison': str(new_ison),
-            'new_mode': str(new_mode)
-        }
-
-        response = firebase.put('/config', new_config, None, None)
-        return response
-        
-
-
-#class TodoSimple(Resource):
-#    def get(self, todo_id):
-#        return {todo_id: todos[todo_id]}
-#
-#    def put(self, todo_id):
-#        todos[todo_id] = request.form['data']
-#        return {todo_id: todos[todo_id]}
-
-#api.add_resource(TodoSimple, '/<string:todo_id>')
 api.add_resource(LumosAPI, '/')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0',debug=True) #Change host to internal IP
-    #app.run(debug=True)
 
