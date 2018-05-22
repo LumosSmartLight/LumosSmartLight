@@ -9,6 +9,7 @@ import { RadioButton, RadioButtonGroup } from 'material-ui/RadioButton';
 import { config } from './config/firebase'
 import { Card } from 'material-ui';
 import { Line } from 'react-chartjs-2'
+import { SliderPicker } from 'react-color'
 import moment from 'moment'
 
 class App extends Component {
@@ -146,19 +147,10 @@ class App extends Component {
     this.setIntensity(this.state.intensity)
   }
 
-  // Todo: better color slide implementation
-  onColorRedSlide = (e, value) => {
-    this.setState({colors: {r: value, g: this.state.colors.g, b: this.state.colors.b}})
-  }
-  onColorGreenSlide = (e, value) => {
-    this.setState({colors: {r: this.state.colors.r, g: value, b: this.state.colors.b}})
-  }
-  onColorBlueSlide = (e, value) => {
-    this.setState({colors: {r: this.state.colors.r, g: this.state.colors.g, b: value}})
-  }
-  
-  onColorSlideStop = () => {
-    firebase.database().ref('config/colors').set(this.state.colors)
+  onSliderPickerStop = (c) => {
+    this.setState({colors: c.rgb}, () => {
+        firebase.database().ref('config/colors').set(this.state.colors)
+    })
   }
 
   onToggle = (e) => {
@@ -191,13 +183,10 @@ class App extends Component {
       },
       radioButton: {
         marginBottom: 16,
+        marginTop: 24
       },
       toggle: {
         marginBottom: 16,
-      },
-      blueslider: {
-        selectionColor: '#00FFFF',
-        handleFillColor: '#00FFFF'
       }
     };
 
@@ -220,9 +209,7 @@ class App extends Component {
             <Slider name="intensity" step={1} min={0} max={100} value={this.state.intensity} onChange={this.onIntensitySlide} onDragStop={this.onIntensitySlideStop} />
 
             <h1 style={{ textAlign: 'left', fontSize: 22 }}> RGB </h1>
-            <Slider sliderStyle={styles.blueslider} name="red" step={1} min={0} max={255} value={this.state.colors.r} onChange={this.onColorRedSlide} onDragStop={this.onColorSlideStop} />
-            <Slider name="green" step={1} min={0} max={255} value={this.state.colors.g} onChange={this.onColorGreenSlide} onDragStop={this.onColorSlideStop.bind(this, "g")} />
-            <Slider name="blue" step={1} min={0} max={255} value={this.state.colors.b} onChange={this.onColorBlueSlide} onDragStop={this.onColorSlideStop.bind(this, "b")} />
+            <SliderPicker onChangeComplete={this.onSliderPickerStop} color={this.state.colors} />
 
             <RadioButtonGroup name="lightmode" defaultSelected={this.state.mode} valueSelected={this.state.mode} onChange={this.onModeChange}>
               <RadioButton
@@ -235,11 +222,11 @@ class App extends Component {
                 label="Automático"
                 style={styles.radioButton}
               />
-              <RadioButton
+              {/* <RadioButton
                 value={2}
                 label="Modo Dormir"
                 style={styles.radioButton}
-              />
+              /> */}
             </RadioButtonGroup>
           </div>
         </Card>
