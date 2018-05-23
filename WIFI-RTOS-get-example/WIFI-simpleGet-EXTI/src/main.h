@@ -62,7 +62,8 @@ extern "C" {
 #define MAIN_PREFIX_BUFFER                  "GET / HTTP/1.1\r\n Accept: */*\r\n\r\n"
 
 /** Weather information provider server. */
-#define MAIN_SERVER_NAME                    "192.168.43.195"
+//#define MAIN_SERVER_NAME                    "192.168.43.195" //Tirta
+#define MAIN_SERVER_NAME					  "192.168.43.99" //Borba
 
 /** Receive buffer size. */
 #define MAIN_WIFI_M2M_BUFFER_SIZE           1400

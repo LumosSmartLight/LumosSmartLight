@@ -2,10 +2,11 @@
 #include "main.h"
 #include <string.h>
 #include <jsmn.h>
+#include "led.h"
+#include "DHT.h"
 #include "bsp/include/nm_bsp.h"
 #include "driver/include/m2m_wifi.h"
 #include "socket/include/socket.h"
-#include "DHT.h"
 
 
 //sensores
@@ -14,12 +15,20 @@
 #define DHT_PIO_PIN 13
 #define DHT_PIO_PIN_MASK (1 << DHT_PIO_PIN)
 
-/*
-#define TEMT_PIO PIOA
-#define TEMT_PIO_ID 11
-#define TEMT_PIO_PIN 17
-#define TEMT_PIO_PIN_MASK (1 << TEMT_PIO_PIN)
-*/
+#define LED3_PIO_ID	   ID_PIOA
+#define LED3_PIO        PIOA
+#define LED3_PIN		   4
+#define LED3_PIN_MASK   (1<<LED3_PIN)
+
+#define NUM_LEDS 24
+
+#define ERASE 0x00000000
+#define BLUE 0x00FF0000
+#define GREEN 0x000000FF
+#define RED 0x0000FF00
+
+volatile uint32_t buffer[24];
+
 #define VOLT_REF        (3300)
 
 /** The maximal digital value */
@@ -33,7 +42,7 @@ volatile bool is_conversion_done = false;
 volatile uint32_t g_ul_value = 0;
 
 /* Canal do sensor de temperatura */
-#define AFEC_CHANNEL_TEMP_SENSOR 1
+#define AFEC_CHANNEL_TEMP_SENSOR 5
 
 
 
@@ -72,12 +81,18 @@ static bool gbTcpConnection = false;
 static char server_host_name[] = MAIN_SERVER_NAME;
 
 
-#define TASK_WIFI_STACK_SIZE            (8192/sizeof(portSTACK_TYPE))
+#define TASK_WIFI_STACK_SIZE            (10240/sizeof(portSTACK_TYPE))
 #define TASK_WIFI_STACK_PRIORITY        (tskIDLE_PRIORITY)
 
 volatile int intensity;
 volatile int mode;
 volatile bool ison;
+volatile int red;
+volatile int green;
+volatile int blue;
+volatile int new_red;
+volatile int new_green;
+volatile int new_blue;
 
 char JSON_STRING[200];
 
@@ -88,7 +103,6 @@ void TC0_Handler(void){
 	* Devemos indicar ao TC que a interrupção foi satisfeita.
 	******************************************************************/
 	ul_dummy = tc_get_status(TC0, 0);
-	printf("kakaka \n");
 
 	/* Avoid compiler warning */
 	UNUSED(ul_dummy);
@@ -99,7 +113,6 @@ void TC0_Handler(void){
 static void AFEC_Temp_callback(void)
 {
 	g_ul_value = afec_channel_get_value(AFEC0, AFEC_CHANNEL_TEMP_SENSOR);
-	printf("Entrou \n");
 	is_conversion_done = true;
 }
 
@@ -114,6 +127,7 @@ static int32_t convert_adc_to_temp(int32_t ADC_value){
    * According to datasheet, The output voltage VT = 0.72V at 27C
    * and the temperature slope dVT/dT = 2.33 mV/C
    */
+  printf("convert_adc_to_temp");
   ul_temp = (ul_vol * 4096 * 0.5) / 3.3;
   return(ul_temp);
 }
@@ -140,7 +154,7 @@ static void config_ADC_TEMP(void){
 	AFEC0->AFEC_MR |= 3;
   
 	/* configura call back */
-	afec_set_callback(AFEC0, AFEC_INTERRUPT_EOC_1,	AFEC_Temp_callback, 1); 
+	afec_set_callback(AFEC0, AFEC_INTERRUPT_EOC_5,	AFEC_Temp_callback, 1); 
    
 	/*** Configuracao específica do canal AFEC ***/
 	struct afec_ch_config afec_ch_cfg;
@@ -444,8 +458,7 @@ static void resolve_cb(uint8_t *hostName, uint32_t hostIp)
  *
  * \return None.
  */
-static void socket_cb(SOCKET sock, uint8_t u8Msg, void *pvMsg)
-{
+static void socket_cb(SOCKET sock, uint8_t u8Msg, void *pvMsg){
   
 	/* Check for socket event on TCP socket. */
 	if (sock == tcp_client_socket) {
@@ -667,6 +680,9 @@ int main(void)
 	/* Initialize the board. */
 	sysclk_init();
 	board_init();
+	
+	/* Disable the watchdog */
+	WDT->WDT_MR = WDT_MR_WDDIS;
 
 	/* Initialize the UART console. */
 	configure_console();
@@ -686,40 +702,55 @@ int main(void)
 	/* incializa conversão ADC */
 	afec_start_software_conversion(AFEC0);
 	
-	//double temp[1], hum[1];
-	//temp[0] = hum[0] = 0;
-	//double *temp = 0;
-	//double *hum = 0;
-	
 	DHT_Setup();
 	
 	
-	//if (xTaskCreate(task_wifi, "Wifi", TASK_WIFI_STACK_SIZE, NULL,
-	//TASK_WIFI_STACK_PRIORITY, NULL) != pdPASS) {
-		//printf("Failed to create Wifi task\r\n");
-	//}
-//
-	//vTaskStartScheduler();
+	
+	if (xTaskCreate(task_wifi, "Wifi", TASK_WIFI_STACK_SIZE, NULL,
+	TASK_WIFI_STACK_PRIORITY, NULL) != pdPASS) {
+		printf("Failed to create Wifi task\r\n");
+	}
+
+	vTaskStartScheduler();
+	
+	
+	// Valor inicial das cores
+	red = 0;
+	green = 0;
+	blue = 150;
+	LED_init(0);
+	LED3_PIO->PIO_CODR = LED3_PIN_MASK;
+	initialize_buffer();
+	uint32_t rgb_value = rgb(red, green, blue);
+	update_buffer(rgb_value);
+	send_buffer();
 	
 	double temp, hum;
 	while(1) {
-		
-		if(is_conversion_done == true) {
-			
-			is_conversion_done = false;
-			
-			printf("Lumens : %d \r\n", g_ul_value);
-			afec_start_software_conversion(AFEC0);
-			delay_s(1);
-		}
+		//if (new_red != red || new_green != green || new_blue != blue) {
+			//red = new_red;
+			//green = new_green;
+			//blue = new_blue;
+			//uint32_t rgb_value = rgb(red, green, blue);
+			//update_buffer(rgb_value);
+			//send_buffer();
+		//}
+		//
+		//if(is_conversion_done == true) {
+			//
+			//is_conversion_done = false;
+			//
+			//printf("Lumens : %d \r\n", g_ul_value);
+			//afec_start_software_conversion(AFEC0);
+			//delay_s(1);
+		//}
 		//DHT_Read(&temp, &hum);
-		//Check status
-		//printf(temp);
-		delay_ms(2000);
+		////Check status
 		//printf("Temperatura: %lf \n", temp);
-		//Print humidity
-		//printf("Humidade: %lf \n", hum);
-		//Sensor needs 1-2s to stabilize its reading
+		////Print humidity
+		//printf("Umidade: %lf \n", hum);
+		////Sensor needs 1-2s to stabilize its reading
+		//delay_ms(2000);
 	};
 	return 0;
 }

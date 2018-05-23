@@ -140,6 +140,7 @@ C_SRCS +=  \
 ../src/ASF/thirdparty/freertos/freertos-8.2.3/Source/timers.c \
 ../src/DHT.c \
 ../src/jsmn.c \
+../src/led.c \
 ../src/ASF/common/components/wifi/winc1500/bsp/source/nm_bsp_same70.c \
 ../src/ASF/common/components/wifi/winc1500/bus_wrapper/source/nm_bus_wrapper_same70.c \
 ../src/ASF/common/components/wifi/winc1500/common/source/nm_common.c \
@@ -200,6 +201,7 @@ src/ASF/thirdparty/freertos/freertos-8.2.3/Source/tasks.o \
 src/ASF/thirdparty/freertos/freertos-8.2.3/Source/timers.o \
 src/DHT.o \
 src/jsmn.o \
+src/led.o \
 src/ASF/common/components/wifi/winc1500/bsp/source/nm_bsp_same70.o \
 src/ASF/common/components/wifi/winc1500/bus_wrapper/source/nm_bus_wrapper_same70.o \
 src/ASF/common/components/wifi/winc1500/common/source/nm_common.o \
@@ -253,6 +255,7 @@ src/ASF/thirdparty/freertos/freertos-8.2.3/Source/tasks.o \
 src/ASF/thirdparty/freertos/freertos-8.2.3/Source/timers.o \
 src/DHT.o \
 src/jsmn.o \
+src/led.o \
 src/ASF/common/components/wifi/winc1500/bsp/source/nm_bsp_same70.o \
 src/ASF/common/components/wifi/winc1500/bus_wrapper/source/nm_bus_wrapper_same70.o \
 src/ASF/common/components/wifi/winc1500/common/source/nm_common.o \
@@ -306,6 +309,7 @@ src/ASF/thirdparty/freertos/freertos-8.2.3/Source/tasks.d \
 src/ASF/thirdparty/freertos/freertos-8.2.3/Source/timers.d \
 src/DHT.d \
 src/jsmn.d \
+src/led.d \
 src/ASF/common/components/wifi/winc1500/bsp/source/nm_bsp_same70.d \
 src/ASF/common/components/wifi/winc1500/bus_wrapper/source/nm_bus_wrapper_same70.d \
 src/ASF/common/components/wifi/winc1500/common/source/nm_common.d \
@@ -359,6 +363,7 @@ src/ASF/thirdparty/freertos/freertos-8.2.3/Source/tasks.d \
 src/ASF/thirdparty/freertos/freertos-8.2.3/Source/timers.d \
 src/DHT.d \
 src/jsmn.d \
+src/led.d \
 src/ASF/common/components/wifi/winc1500/bsp/source/nm_bsp_same70.d \
 src/ASF/common/components/wifi/winc1500/bus_wrapper/source/nm_bus_wrapper_same70.d \
 src/ASF/common/components/wifi/winc1500/common/source/nm_common.d \
@@ -414,6 +419,8 @@ LINKER_SCRIPT_DEP+=  \
 
 
 # AVR32/GNU C Compiler
+
+
 
 
 
