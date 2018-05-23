@@ -150,7 +150,7 @@ src/ASF/common/components/wifi/winc1500/bsp/source/nm_bsp_same70.d \
  ../src/ASF/common/utils/interrupt.h \
  ../src/ASF/common/utils/interrupt/interrupt_sam_nvic.h \
  ../src/ASF/sam/boards/same70_xplained/same70_xplained.h ../src/asf.h \
- ../src/ASF/sam/utils/status_codes.h \
+ ../src/ASF/sam/drivers/afec/afec.h ../src/ASF/sam/utils/status_codes.h \
  ../src/ASF/common/services/delay/delay.h \
  ../src/ASF/common/services/clock/sysclk.h ../src/config/conf_clock.h \
  ../src/ASF/common/services/clock/same70/sysclk.h \
@@ -191,6 +191,10 @@ src/ASF/common/components/wifi/winc1500/bsp/source/nm_bsp_same70.d \
  ../src/ASF/sam/drivers/pmc/sleep.h ../src/ASF/sam/utils/fpu/fpu.h \
  ../src/ASF/sam/boards/same70_xplained/led.h \
  ../src/ASF/sam/drivers/spi/spi.h \
+ ../src/ASF/common/services/sleepmgr/sam/sleepmgr.h \
+ ../src/config/conf_sleepmgr.h \
+ ../src/ASF/common/services/sleepmgr/sleepmgr.h \
+ ../src/ASF/common/services/sleepmgr/sam/sleepmgr.h \
  ../src/ASF/common/utils/stdio/stdio_serial/stdio_serial.h \
  ../src/ASF/common/services/serial/serial.h \
  ../src/ASF/common/services/serial/sam_uart/uart_serial.h \
@@ -501,6 +505,8 @@ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\arm\arm-gnu-toolchain\arm-no
 
 ../src/asf.h:
 
+../src/ASF/sam/drivers/afec/afec.h:
+
 ../src/ASF/sam/utils/status_codes.h:
 
 ../src/ASF/common/services/delay/delay.h:
@@ -590,6 +596,14 @@ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\arm\arm-gnu-toolchain\arm-no
 ../src/ASF/sam/boards/same70_xplained/led.h:
 
 ../src/ASF/sam/drivers/spi/spi.h:
+
+../src/ASF/common/services/sleepmgr/sam/sleepmgr.h:
+
+../src/config/conf_sleepmgr.h:
+
+../src/ASF/common/services/sleepmgr/sleepmgr.h:
+
+../src/ASF/common/services/sleepmgr/sam/sleepmgr.h:
 
 ../src/ASF/common/utils/stdio/stdio_serial/stdio_serial.h:
 
