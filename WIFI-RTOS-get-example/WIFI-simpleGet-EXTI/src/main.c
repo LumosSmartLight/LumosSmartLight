@@ -82,7 +82,16 @@ static char server_host_name[] = MAIN_SERVER_NAME;
 
 
 #define TASK_WIFI_STACK_SIZE            (10240/sizeof(portSTACK_TYPE))
-#define TASK_WIFI_STACK_PRIORITY        (tskIDLE_PRIORITY)
+#define TASK_WIFI_STACK_PRIORITY        (tskIDLE_PRIORITY+1)
+
+#define TASK_LED_STACK_SIZE             (1024/sizeof(portSTACK_TYPE))
+#define TASK_LED_STACK_PRIORITY         (tskIDLE_PRIORITY)
+
+#define TASK_DHT_STACK_SIZE             (1024/sizeof(portSTACK_TYPE))
+#define TASK_DHT_STACK_PRIORITY         (tskIDLE_PRIORITY)
+
+#define TASK_TEMT_STACK_SIZE            (1024/sizeof(portSTACK_TYPE))
+#define TASK_TEMT_STACK_PRIORITY        (tskIDLE_PRIORITY)
 
 volatile int intensity;
 volatile int mode;
@@ -93,6 +102,8 @@ volatile int blue;
 volatile int new_red;
 volatile int new_green;
 volatile int new_blue;
+volatile double temp;
+volatile double hum;
 
 char JSON_STRING[200];
 
@@ -478,7 +489,7 @@ static void socket_cb(SOCKET sock, uint8_t u8Msg, void *pvMsg){
   
 	/* Check for socket event on TCP socket. */
 	if (sock == tcp_client_socket) {
-		const TickType_t xDelay = 5000/portTICK_PERIOD_MS;
+		const TickType_t xDelay = 2000/portTICK_PERIOD_MS;
 		switch (u8Msg) {
 		case SOCKET_MSG_CONNECT:
 		{
@@ -503,7 +514,7 @@ static void socket_cb(SOCKET sock, uint8_t u8Msg, void *pvMsg){
 					tcp_client_socket = -1;
 				}
 			}
-			vTaskDelay(xDelay);
+			
 		}
 		break;
     
@@ -534,6 +545,7 @@ static void socket_cb(SOCKET sock, uint8_t u8Msg, void *pvMsg){
 				close(tcp_client_socket);
 				tcp_client_socket = -1;
 			}
+			vTaskDelay(xDelay);
 		}
 		break;
 
@@ -684,6 +696,48 @@ static void task_wifi(void *pvParameters) {
 	  }
 	  }
 }
+
+static void task_led_ring(void *pvParameters) {
+	const TickType_t xDelay = 1000/portTICK_PERIOD_MS;
+	for (;;) {
+		if (new_red != red || new_green != green || new_blue != blue) {
+			red = new_red;
+			green = new_green;
+			blue = new_blue;
+			uint32_t rgb_value = rgb(red, green, blue);
+			update_buffer(rgb_value);
+			send_buffer();
+		}
+		vTaskDelay(xDelay);	
+	}
+}
+
+static void task_dht_read(void *pvParameters) {
+	const TickType_t xDelay = 3000/portTICK_PERIOD_MS;
+	for (;;) {
+		DHT_Read(&temp, &hum);
+		//Check status
+		printf("Temperatura: %lf \n", temp);
+		//Print humidity
+		printf("Umidade: %lf \n", hum);
+		//Sensor needs 1-2s to stabilize its reading
+		vTaskDelay(xDelay);	
+	}
+}
+
+static void task_temt_read(void *pvParameters) {
+	const TickType_t xDelay = 2000/portTICK_PERIOD_MS;
+	for (;;) {
+		if(is_conversion_done == true) {
+			
+			is_conversion_done = false;
+			
+			printf("Lumens : %d \r\n", g_ul_value);
+			afec_start_software_conversion(AFEC0);
+		}	
+		vTaskDelay(xDelay);
+	}
+}
 /**
  * \brief Main application function.
  *
@@ -737,35 +791,25 @@ int main(void)
 	TASK_WIFI_STACK_PRIORITY, NULL) != pdPASS) {
 		printf("Failed to create Wifi task\r\n");
 	}
+	
+	if (xTaskCreate(task_led_ring, "Led_ring", TASK_LED_STACK_SIZE, NULL,
+	TASK_LED_STACK_PRIORITY, NULL) != pdPASS) {
+		printf("Failed to create Led_ring task\r\n");
+	}
+	
+	if (xTaskCreate(task_dht_read, "DHT", TASK_DHT_STACK_SIZE, NULL,
+	TASK_DHT_STACK_PRIORITY, NULL) != pdPASS) {
+		printf("Failed to create DHT task\r\n");
+	}
+	
+	if (xTaskCreate(task_temt_read, "TEMT", TASK_TEMT_STACK_SIZE, NULL,
+	TASK_TEMT_STACK_PRIORITY, NULL) != pdPASS) {
+		printf("Failed to create TEMT task\r\n");
+	}
 
 	vTaskStartScheduler();
 	
-	double temp, hum;
 	while(1) {
-		if (new_red != red || new_green != green || new_blue != blue) {
-			red = new_red;
-			green = new_green;
-			blue = new_blue;
-			uint32_t rgb_value = rgb(red, green, blue);
-			update_buffer(rgb_value);
-			send_buffer();
-		}
-		
-		if(is_conversion_done == true) {
-			
-			is_conversion_done = false;
-			
-			printf("Lumens : %d \r\n", g_ul_value);
-			afec_start_software_conversion(AFEC0);
-			delay_s(1);
-		}
-		DHT_Read(&temp, &hum);
-		//Check status
-		printf("Temperatura: %lf \n", temp);
-		//Print humidity
-		printf("Umidade: %lf \n", hum);
-		//Sensor needs 1-2s to stabilize its reading
-		delay_ms(2000);
 	};
 	return 0;
 }
