@@ -102,7 +102,7 @@ void frenetic(){
 
 uint32_t rgb (int r, int g, int b){
 	uint32_t result = 0;
-	result = b << 16 | g << 8 | r << 0;
+	result = b << 16 | r << 8 | g << 0;
 	return result;
 	
 }

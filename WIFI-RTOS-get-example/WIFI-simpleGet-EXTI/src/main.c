@@ -85,7 +85,7 @@ static char server_host_name[] = MAIN_SERVER_NAME;
 #define TASK_WIFI_STACK_PRIORITY        (tskIDLE_PRIORITY+1)
 
 #define TASK_LED_STACK_SIZE             (1024/sizeof(portSTACK_TYPE))
-#define TASK_LED_STACK_PRIORITY         (tskIDLE_PRIORITY)
+#define TASK_LED_STACK_PRIORITY         (tskIDLE_PRIORITY+2)
 
 #define TASK_DHT_STACK_SIZE             (1024/sizeof(portSTACK_TYPE))
 #define TASK_DHT_STACK_PRIORITY         (tskIDLE_PRIORITY)
@@ -489,7 +489,7 @@ static void socket_cb(SOCKET sock, uint8_t u8Msg, void *pvMsg){
   
 	/* Check for socket event on TCP socket. */
 	if (sock == tcp_client_socket) {
-		const TickType_t xDelay = 2000/portTICK_PERIOD_MS;
+		const TickType_t xDelay = 100/portTICK_PERIOD_MS;
 		switch (u8Msg) {
 		case SOCKET_MSG_CONNECT:
 		{
@@ -698,7 +698,7 @@ static void task_wifi(void *pvParameters) {
 }
 
 static void task_led_ring(void *pvParameters) {
-	const TickType_t xDelay = 1000/portTICK_PERIOD_MS;
+	const TickType_t xDelay = 500/portTICK_PERIOD_MS;
 	for (;;) {
 		if (new_red != red || new_green != green || new_blue != blue) {
 			red = new_red;
