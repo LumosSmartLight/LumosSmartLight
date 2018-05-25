@@ -15,9 +15,9 @@
 #define DHT_PIO_PIN 13
 #define DHT_PIO_PIN_MASK (1 << DHT_PIO_PIN)
 
-#define LED3_PIO_ID	   ID_PIOA
-#define LED3_PIO        PIOA
-#define LED3_PIN		   4
+#define LED3_PIO_ID	    ID_PIOD
+#define LED3_PIO        PIOD
+#define LED3_PIN		26
 #define LED3_PIN_MASK   (1<<LED3_PIN)
 
 #define NUM_LEDS 24
@@ -382,7 +382,7 @@ int json_parse() {
 		printf("Failed to parse JSON: %d\n", r);
 		return 1;
 	}
-	printf(JSON_STRING);
+	//printf(JSON_STRING);
 
 	/* Assume the top-level element is an object*/ 
 	if (r < 1 || t[0].type != JSMN_OBJECT) {
@@ -406,6 +406,22 @@ int json_parse() {
 					//JSON_STRING + t[i+1].start);
 			mode = atoi(JSON_STRING + t[i+1].start);
 			printf("mode: %d\n", mode);
+			i++;
+		} else if (jsoneq(JSON_STRING, &t[i], "a") == 0) {
+			i++;
+		} else if (jsoneq(JSON_STRING, &t[i], "colors") == 0) {
+			i++;
+		} else if (jsoneq(JSON_STRING, &t[i], "r") == 0) {
+			new_red = atoi(JSON_STRING + t[i+1].start);
+			printf("red: %d\n", new_red);
+			i++;
+		} else if (jsoneq(JSON_STRING, &t[i], "g") == 0) {
+			new_green = atoi(JSON_STRING + t[i+1].start);
+			printf("green: %d\n", new_green);
+			i++;
+		} else if (jsoneq(JSON_STRING, &t[i], "b") == 0) {
+			new_blue = atoi(JSON_STRING + t[i+1].start);
+			printf("blue: %d\n", new_blue);
 			i++;
 		} else if (jsoneq(JSON_STRING, &t[i], "ison") == 0) {
 			/* We may want to do strtol() here to get numeric value */
@@ -695,14 +711,25 @@ int main(void)
 	
 	TC_init(TC0, ID_TC0, 0, 5);
 	
-	pmc_enable_periph_clk(ID_PIOA);
-	pio_set_output(PIOA, 1, 0, 0, 0);
-	pio_set_peripheral(PIOA, PIO_PERIPH_B, 1);
+	pmc_enable_periph_clk(ID_PIOD);
+	pio_set_output(PIOD, 1, 0, 0, 0);
+	pio_set_peripheral(PIOD, PIO_PERIPH_B, 1);
 	
 	/* incializa conversão ADC */
 	afec_start_software_conversion(AFEC0);
 	
 	DHT_Setup();
+	
+	//Valor inicial das cores
+	red = 0;
+	green = 0;
+	blue = 200;
+	LED_init(0);
+	LED3_PIO->PIO_CODR = LED3_PIN_MASK;
+	initialize_buffer();
+	uint32_t rgb_value = rgb(red, green, blue);
+	update_buffer(rgb_value);
+	send_buffer();
 	
 	
 	
@@ -713,44 +740,32 @@ int main(void)
 
 	vTaskStartScheduler();
 	
-	
-	// Valor inicial das cores
-	red = 0;
-	green = 0;
-	blue = 150;
-	LED_init(0);
-	LED3_PIO->PIO_CODR = LED3_PIN_MASK;
-	initialize_buffer();
-	uint32_t rgb_value = rgb(red, green, blue);
-	update_buffer(rgb_value);
-	send_buffer();
-	
 	double temp, hum;
 	while(1) {
-		//if (new_red != red || new_green != green || new_blue != blue) {
-			//red = new_red;
-			//green = new_green;
-			//blue = new_blue;
-			//uint32_t rgb_value = rgb(red, green, blue);
-			//update_buffer(rgb_value);
-			//send_buffer();
-		//}
-		//
-		//if(is_conversion_done == true) {
-			//
-			//is_conversion_done = false;
-			//
-			//printf("Lumens : %d \r\n", g_ul_value);
-			//afec_start_software_conversion(AFEC0);
-			//delay_s(1);
-		//}
-		//DHT_Read(&temp, &hum);
-		////Check status
-		//printf("Temperatura: %lf \n", temp);
-		////Print humidity
-		//printf("Umidade: %lf \n", hum);
-		////Sensor needs 1-2s to stabilize its reading
-		//delay_ms(2000);
+		if (new_red != red || new_green != green || new_blue != blue) {
+			red = new_red;
+			green = new_green;
+			blue = new_blue;
+			uint32_t rgb_value = rgb(red, green, blue);
+			update_buffer(rgb_value);
+			send_buffer();
+		}
+		
+		if(is_conversion_done == true) {
+			
+			is_conversion_done = false;
+			
+			printf("Lumens : %d \r\n", g_ul_value);
+			afec_start_software_conversion(AFEC0);
+			delay_s(1);
+		}
+		DHT_Read(&temp, &hum);
+		//Check status
+		printf("Temperatura: %lf \n", temp);
+		//Print humidity
+		printf("Umidade: %lf \n", hum);
+		//Sensor needs 1-2s to stabilize its reading
+		delay_ms(2000);
 	};
 	return 0;
 }

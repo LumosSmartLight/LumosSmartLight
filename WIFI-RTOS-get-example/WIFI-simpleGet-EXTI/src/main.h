@@ -48,9 +48,11 @@ extern "C" {
 #include "driver/include/m2m_wifi.h"
 
 /** Wi-Fi Settings */
-#define MAIN_WLAN_SSID                    "Tirta" /**< Destination SSID */
+//#define MAIN_WLAN_SSID                    "Tirta" /**< Destination SSID */
+#define MAIN_WLAN_SSID                    "asimov3" /**< Destination SSID */
 #define MAIN_WLAN_AUTH                    M2M_WIFI_SEC_WPA_PSK /**< Security manner */
-#define MAIN_WLAN_PSK                     "tirtop69" /**< Password for Destination SSID */
+//#define MAIN_WLAN_PSK                     "tirtop69" /**< Password for Destination SSID */
+#define MAIN_WLAN_PSK                     "a ultima pergunta" /**< Password for Destination SSID */
 
 /** Using broadcast address for simplicity. */
 #define MAIN_SERVER_PORT                    (5000)
@@ -63,10 +65,10 @@ extern "C" {
 
 /** Weather information provider server. */
 //#define MAIN_SERVER_NAME                    "192.168.43.195" //Tirta
-#define MAIN_SERVER_NAME					  "192.168.43.99" //Borba
+#define MAIN_SERVER_NAME					  "10.242.32.24" //Borba
 
 /** Receive buffer size. */
-#define MAIN_WIFI_M2M_BUFFER_SIZE           1400
+#define MAIN_WIFI_M2M_BUFFER_SIZE           2000
 
 #define MAIN_HEX2ASCII(x)                   (((x) >= 10) ? (((x) - 10) + 'A') : ((x) + '0'))
 
