@@ -105,7 +105,12 @@ volatile int new_blue;
 volatile double temp;
 volatile double hum;
 
+uint32_t g_socket_cb_mode;
+uint32_t g_socket_cb_counter;
+
 char JSON_STRING[200];
+
+
 
 void TC0_Handler(void){
 	volatile uint32_t ul_dummy;
@@ -476,17 +481,70 @@ static void resolve_cb(uint8_t *hostName, uint32_t hostIp)
 			(int)IPV4_BYTE(hostIp, 2), (int)IPV4_BYTE(hostIp, 3));
 }
 
-/**
- * \brief Callback function of TCP client socket.
- *
- * \param[in] sock socket handler.
- * \param[in] u8Msg Type of Socket notification
- * \param[in] pvMsg A structure contains notification informations.
- *
- * \return None.
- */
-static void socket_cb(SOCKET sock, uint8_t u8Msg, void *pvMsg){
-  
+static void socket_cb_send_info(SOCKET sock, uint8_t u8Msg, void *pvMsg){
+	/* Check for socket event on TCP socket. */
+	if (sock == tcp_client_socket) {
+		const TickType_t xDelay = 100/portTICK_PERIOD_MS;
+		switch (u8Msg) {
+		case SOCKET_MSG_CONNECT:
+		{
+      printf("socket_msg_connect\n"); 
+			if (gbTcpConnection) {
+				memset(gau8ReceivedBuffer, 0, sizeof(gau8ReceivedBuffer));
+				//sprintf((char *)gau8ReceivedBuffer, "%s", MAIN_PREFIX_BUFFER);
+				sprintf((char *)gau8ReceivedBuffer, "GET /api/sendDht?temp=%f&hum=%f HTTP/1.1\r\n Accept: */*\r\n\r\n", temp, hum);
+				
+
+				tstrSocketConnectMsg *pstrConnect = (tstrSocketConnectMsg *)pvMsg;
+				if (pstrConnect && pstrConnect->s8Error >= SOCK_ERR_NO_ERROR) {
+          printf("send \n");
+					send(tcp_client_socket, gau8ReceivedBuffer, strlen((char *)gau8ReceivedBuffer), 0);
+
+					memset(gau8ReceivedBuffer, 0, MAIN_WIFI_M2M_BUFFER_SIZE);
+					recv(tcp_client_socket, &gau8ReceivedBuffer[0], MAIN_WIFI_M2M_BUFFER_SIZE, 0);
+				} else {
+					printf("error sending info!\r\n");
+					gbTcpConnection = false;
+					close(tcp_client_socket);
+					tcp_client_socket = -1;
+				}
+			}
+			
+		}
+		break;
+    
+
+
+		case SOCKET_MSG_RECV:
+		{
+			char *pcIndxPtr;
+			char *pcEndPtr;
+
+			tstrSocketRecvMsg *pstrRecv = (tstrSocketRecvMsg *)pvMsg;
+			if (pstrRecv && pstrRecv->s16BufferSize > 0) {
+				//printf(pstrRecv->pu8Buffer);
+				
+				memset(gau8ReceivedBuffer, 0, sizeof(gau8ReceivedBuffer));
+				recv(tcp_client_socket, &gau8ReceivedBuffer[0], MAIN_WIFI_M2M_BUFFER_SIZE, 0);
+				
+			} else {
+				printf("socket_cb: recv error!\r\n");
+				close(tcp_client_socket);
+				tcp_client_socket = -1;
+			}
+			vTaskDelay(xDelay);
+		}
+		break;
+
+		default:
+			break;
+		}
+	}
+}
+
+
+void socket_cb_get(SOCKET sock, uint8_t u8Msg, void *pvMsg) {
+	
 	/* Check for socket event on TCP socket. */
 	if (sock == tcp_client_socket) {
 		const TickType_t xDelay = 100/portTICK_PERIOD_MS;
@@ -552,6 +610,32 @@ static void socket_cb(SOCKET sock, uint8_t u8Msg, void *pvMsg){
 		default:
 			break;
 		}
+	}
+}
+
+/**
+ * \brief Callback function of TCP client socket.
+ *
+ * \param[in] sock socket handler.
+ * \param[in] u8Msg Type of Socket notification
+ * \param[in] pvMsg A structure contains notification informations.
+ *
+ * \return None.
+ */
+static void socket_cb(SOCKET sock, uint8_t u8Msg, void *pvMsg){
+	printf("eaeee");
+	if(g_socket_cb_mode == 1) {
+		if (g_socket_cb_counter == 20) {
+			socket_cb_get(sock, u8Msg, pvMsg);
+			g_socket_cb_counter = 0;
+			g_socket_cb_mode = 2;
+		} else {
+			socket_cb_get(sock, u8Msg, pvMsg);
+			g_socket_cb_counter++;
+		}
+	} else if (g_socket_cb_mode == 2) {
+		socket_cb_send_info(sock, u8Msg, pvMsg);
+		g_socket_cb_mode = 1;
 	}
 }
 
@@ -753,6 +837,10 @@ int main(void)
 	
 	/* Disable the watchdog */
 	WDT->WDT_MR = WDT_MR_WDDIS;
+	
+	/* Socket callback mode */
+	g_socket_cb_mode = 1;
+	g_socket_cb_counter = 0;
 
 	/* Initialize the UART console. */
 	configure_console();
@@ -800,6 +888,11 @@ int main(void)
 	if (xTaskCreate(task_dht_read, "DHT", TASK_DHT_STACK_SIZE, NULL,
 	TASK_DHT_STACK_PRIORITY, NULL) != pdPASS) {
 		printf("Failed to create DHT task\r\n");
+	}
+	
+	if (xTaskCreate(task_temt_read, "TEMT", TASK_TEMT_STACK_SIZE, NULL,
+	TASK_TEMT_STACK_PRIORITY, NULL) != pdPASS) {
+		printf("Failed to create TEMT task\r\n");
 	}
 	
 	if (xTaskCreate(task_temt_read, "TEMT", TASK_TEMT_STACK_SIZE, NULL,
