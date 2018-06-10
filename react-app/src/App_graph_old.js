@@ -1,31 +1,21 @@
 import React, { Component } from 'react';
-
 import logo from '../src/lumos.png';
-import sun from '../src/sun.png';
-import cloud from '../src/cloud.png';
-import snowflake from '../src/snowflake.png';
-import dry from '../src/dry.png';
-import humid from '../src/humid.png';
-
 import './App.css';
 import firebase from 'firebase'
-import { config } from './config/firebase'
-
 import Slider from 'material-ui/Slider';
 import Toggle from 'material-ui/Toggle';
 import RaisedButton from 'material-ui/RaisedButton';
 import { RadioButton, RadioButtonGroup } from 'material-ui/RadioButton';
+import { config } from './config/firebase'
 import { Card } from 'material-ui';
 import { Line } from 'react-chartjs-2'
-import { HuePicker } from 'react-color'
+import { SliderPicker } from 'react-color'
 import moment from 'moment'
 
 class App extends Component {
   constructor(props){
     super(props)
     this.state = {
-      temperature: 0,
-      humidity: 0,
       intensity: 0,
       mode: 1,
       isToggled: true,
@@ -35,22 +25,80 @@ class App extends Component {
           b: 255
       },
       isLoaded: false,
+      chartData: {
+        labels: [],
+        datasets: [{
+            label: 'Luminosidade',
+            fill: false,
+            lineTension: 0.1,
+            backgroundColor: 'rgba(230, 90, 0, 0.4)',
+            borderColor: 'rgb(230, 90, 0)',
+            borderCapStyle: 'butt',
+            borderDash: [],
+            borderDashOffset: 0.0,
+            borderJoinStyle: 'miter',
+            pointBorderColor: 'rgb(230, 90, 0)',
+            pointBackgroundColor: '#fff',
+            pointBorderWidth: 1,
+            pointHoverRadius: 5,
+            pointHoverBackgroundColor: 'rgb(230, 90, 0)',
+            pointHoverBorderColor: 'rgba(220,220,220,1)',
+            pointHoverBorderWidth: 2,
+            pointRadius: 1,
+            pointHitRadius: 10,
+            data: []
+        }]
+      }
     }
+
+    this.chartOptions = {
+      options: {
+        responsive: true,
+        title: {
+          display: false,
+          text: 'Chart.js Line Chart'
+        },
+        tooltips: {
+          mode: 'index',
+          intersect: false,
+        },
+        hover: {
+          mode: 'nearest',
+          intersect: true
+        },
+        scales: {
+          xAxes: [{
+            display: true,            
+            type: 'time',
+            time: {
+              unit: 'minute',
+            }
+          }],
+          yAxes: [{
+            display: true,
+            scaleLabel: {
+              display: true,
+              labelString: 'Luminosidade'
+            }
+          }]
+        }
+      }
+    }
+  
   }
 
   
 
   componentWillMount() {
     firebase.initializeApp(config)
+    firebase.database().ref('luminosity').on('value', this.intensityStreamHandler)
     firebase.database().ref('config').once('value', (snap) => {
       let v =  snap.val()
       console.log(v)
       this.setState({
-        temperature: 0,
-        humidity: 0,
+        isToggled : Boolean(v.ison), 
         intensity : parseInt(100 * v.intensity / 1024),
         mode: v.mode,
-        isToggled : Boolean(v.ison), 
         colors: {
           r: v.colors.r,
           g: v.colors.g,
@@ -59,12 +107,31 @@ class App extends Component {
         isLoaded: true
       })
     })
-    firebase.database().ref('temperature').once('value', (snap) => {
-      this.setState({temperature: snap.val()});
+  }
+
+  intensityStreamHandler = async (snapshot) => {
+    console.log('new intensity data received')
+    if (snapshot.val() === undefined || snapshot.val() === null) {
+      return
+    }
+
+    let newChartData = {...this.state}
+    let dataArray = Object.values(snapshot.val()).map((val) => {
+      return {t: val.timestamp, y: val.value}
     })
-    firebase.database().ref('humidity').once('value', (snap) => {
-      this.setState({humidity: snap.val()});
-    })
+
+    let labels = []
+    for (let i = 0; i < dataArray.length; i++) {
+      labels.push(parseInt(dataArray[i].t))
+    }
+
+    let intensity = parseInt((dataArray[dataArray.length - 1].y - 10) / 3)
+    let value = (100 - intensity) > 0 ? (100 - intensity) : 0
+
+    newChartData.chartData.labels = labels
+    newChartData.chartData.datasets[0].data = dataArray
+
+    this.setState(newChartData)
   }
 
   setIntensity = async (value) => {
@@ -98,24 +165,16 @@ class App extends Component {
     })
   }
 
+  onClearClick = (e) => {
+    firebase.database().ref('luminosity').remove()
+  }
+
   render() {
     const getColor = () => {
         let value = this.state.intensity/100
         //value from 0 to 1
         var hue = ((1 - value) * 120).toString(10);
-        return ["hsl(", hue, ", 100%, 45%)"].join("");    
-    }
-
-    const getTempColor = () => {
-      let value = this.state.temperature
-      var hue = (200 - (value * 4.8)).toString(10);
-      return ["hsl(", hue, ", 100%, 50%)"].join("");    
-    }
-
-    const getHumColor = () => {
-      let value = this.state.humidity
-      var hue = ((value * 1.3)).toString(10);
-      return ["hsl(", hue, ", 100%, 50%)"].join("");    
+        return ["hsl(", hue, ",100%,45%)"].join("");    
     }
 
     const styles = {
@@ -128,17 +187,6 @@ class App extends Component {
       },
       toggle: {
         marginBottom: 16,
-      },
-      tempcard: {
-        opacity: this.state.isLoaded ? 1 : 0,
-        maxWidth: '100%',
-        display: 'inline-block'
-      },
-      humcard: {
-        opacity: this.state.isLoaded ? 1 : 0,
-        maxWidth: '100%',
-        marginBottom: 36,
-        display: 'inline-block'
       }
     };
 
@@ -161,7 +209,7 @@ class App extends Component {
             <Slider name="intensity" step={1} min={0} max={100} value={this.state.intensity} onChange={this.onIntensitySlide} onDragStop={this.onIntensitySlideStop} />
 
             <h1 style={{ textAlign: 'left', fontSize: 22 }}> RGB </h1>
-            <HuePicker width={'100%'} onChangeComplete={this.onSliderPickerStop} color={this.state.colors} />
+            <SliderPicker onChangeComplete={this.onSliderPickerStop} color={this.state.colors} />
 
             <RadioButtonGroup name="lightmode" defaultSelected={this.state.mode} valueSelected={this.state.mode} onChange={this.onModeChange}>
               <RadioButton
@@ -171,7 +219,7 @@ class App extends Component {
               />
               <RadioButton
                 value={1}
-                label="Auto"
+                label="Automático"
                 style={styles.radioButton}
               />
               {/* <RadioButton
@@ -182,34 +230,12 @@ class App extends Component {
             </RadioButtonGroup>
           </div>
         </Card>
+
+        <Card className='card' style={{ opacity: this.state.isLoaded ? 1 : 0 }}>
+          <Line data={this.state.chartData} options={this.chartOptions.options}/>
+          <RaisedButton label="Clear history" onClick={this.onClearClick} />
+        </Card>
         
-        <Card className='card-temp' style={styles.tempcard}>
-          <h1 style={{ textAlign: 'center', fontSize: 22 }}> 
-            Temperature <br/>
-            <span className='temperature' 
-              style={{ color: getTempColor(), textAlign: 'center', fontSize: 36}}> 
-              {this.state.temperature}ºC <br/>
-              {this.state.temperature >= 24 ? 
-                <img className='temp-img-sun' style={{height: '30%', width: '30%', marginTop: 16}} src={sun}/> : ''}
-              {this.state.temperature < 24 && this.state.temperature >= 16 ? 
-                <img className='temp-img-cloud' style={{height: '30%', width: '30%', marginTop: 16}} src={cloud}/> : ''}
-              {this.state.temperature < 16 ? 
-              <img className='temp-img-snow' style={{height: '30%', width: '30%', marginTop: 16}} src={snowflake}/> : ''}
-            </span>
-          </h1>
-        </Card>
-        <Card className='card-hum' style={styles.humcard}>
-          <h1 style={{ textAlign: 'center', fontSize: 22 }}> 
-            Humidity<br/>
-            <span className='humidity' 
-              style={{ color: getHumColor(), textAlign: 'center', fontSize: 36}}> 
-              {this.state.humidity}% <br/>
-              {this.state.humidity >= 60 ? 
-                <img className='hum-img' style={{height: '30%', width: '30%', marginTop: 16}} src={humid}/> :
-                <img className='hum-img' style={{height: '30%', width: '30%', marginTop: 16}} src={dry}/>}
-            </span>
-          </h1>
-        </Card>
       </div>
     );
   }
