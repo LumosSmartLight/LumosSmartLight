@@ -20,8 +20,8 @@ class LumosAPI(Resource):
         temperature = request.args.get('temp', default = 1.0, type = float)
         humidity = request.args.get('hum', default = 1.0, type = float)
         print(temperature, humidity)
-        firebase.post('/temperature', temperature)
-        firebase.post('/humidity', humidity)
+        firebase.put('/', name='temperature', data=temperature)
+        firebase.put('/', name='humidity', data=humidity)
         return "new temperature and humidity data sent"
         
 api.add_resource(LumosAPI, '/')
